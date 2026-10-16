@@ -1,0 +1,1 @@
+# pisot-reciprocal-sums
