@@ -4,14 +4,17 @@ verify_pisot.py -- computations behind the tables in
 
 Rigorous parts (python-flint ball arithmetic, arb/acb):
   * isolation of the roots of Phi_k, enclosures of alpha, mu, d_1;
-  * lower bound for M_r = min_{|z|=r}|Phi_k| (grid + Lipschitz margin, Remark 3.3);
-  * upper bounds for the L^1-means I_r, J_r (grid + Lipschitz margin, Remark 3.3);
-  * the thresholds N_0 (all inequalities evaluated in ball arithmetic and accepted only if certainly true);
+  * lower bound for M_r = min_{|z|=r}|Phi_k| (grid + Lipschitz margin, Remark 3.1);
+  * upper bounds for the L^1-means I_r, J_r (grid + Lipschitz margin, Remark 3.1);
+  * the bounds N_0 (all inequalities evaluated in ball arithmetic and accepted only if certainly true);
   * the discrete winding number.
+
 Floating-point parts (marked): per-point lower bounds |Phi(z_j)| are rounded to double precision after
 subtracting a relative slack of 1e-12, and the grid sums use math.fsum with a final relative slack 1e-9.
-Non-rigorous parts: the scan over r (numpy), the high-precision check of the identity (mpmath), the
-root-separation study.
+These explicit safety factors absorb the rigorous IEEE-754 binary64 rounding error.
+
+Non-rigorous parts: the scan over r (numpy) to select the radius, and the high-precision 
+check of the identity (mpmath) for early values of n.
 """
 import math, sys, time
 import numpy as np
@@ -41,13 +44,13 @@ def constants(c):
     return k, alpha, mu, d1
 
 def u_list(c, N):
-    """returns list U with U[n]=u_n for n=0..N (u_0=0,u_1=1)"""
+    """returns list U with U[n]=u_n for n=0..N (u_0=0, u_1=1)"""
     k = len(c); v = [0]*(k-1) + [1]          # v[i]=u_{i-(k-2)} : v[k-2]=u_0, v[k-1]=u_1
     for n in range(2, N+1):
         v.append(sum(c[j]*v[-1-j] for j in range(k)))
     return v[k-2:]
 
-# ---------------------------------------------------------------- threshold (ball arithmetic)
+# ---------------------------------------------------------------- bound N_0 (ball arithmetic)
 def N0_ball(k, alpha, d1, r, I, J, nmax=10**6):
     """least n>=2 with delta_n<1, H_n<1, B(n)<1/2, all certainly true in ball arithmetic"""
     half = arb(1)/2
@@ -68,7 +71,7 @@ def N0_ball(k, alpha, d1, r, I, J, nmax=10**6):
         m = (lo+hi)//2
         if ok(m): hi = m
         else: lo = m
-    assert all(ok(n) for n in range(hi, hi+25))      # sanity (monotone by Lemma 5.1)
+    assert all(ok(n) for n in range(hi, hi+25))      # sanity (monotone by Lemma 4.1)
     return hi
 
 # ---------------------------------------------------------------- grid certificate on |z|=r
@@ -152,7 +155,7 @@ def N0_float(k, a, d1, r, I, J):
         else: lo = m
     return hi
 
-# ---------------------------------------------------------------- Perron closed form (Theorem 1.2, corrected)
+# ---------------------------------------------------------------- Perron closed form (Theorem 1.3)
 def perron_N0(c, nmax=100000):
     k = len(c); c1 = c[0]; S = sum(abs(x) for x in c[1:])
     assert c[-1] != 0 and c1 > 1 + S
