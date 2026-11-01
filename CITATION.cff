@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the accompanying paper and this record."
+title: "verify_pisot.py: code for 'Effective Bounds for Reciprocal Sums of Higher-Order Linear Recurrences'"
+type: software
+authors:
+  - family-names: Suna
+    given-names: Artatrana
+    affiliation: "Government Women's College, Sambalpur, Odisha, India"
+  - family-names: Ray
+    given-names: Prasanta Kumar
+    affiliation: "Sambalpur University, Odisha, India"
+version: "1.2"
+license: MIT
+repository-code: "https://github.com/Arta1729/pisot-reciprocal-sums"
+keywords:
+  - linear recurrence
+  - reciprocal sums
+  - Pisot polynomial
+  - ball arithmetic

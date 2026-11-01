@@ -4,8 +4,8 @@ verify_pisot.py -- computations behind the tables in
 
 Rigorous parts (python-flint ball arithmetic, arb/acb):
   * isolation of the roots of Phi_k, enclosures of alpha, mu, d_1;
-  * lower bound for M_r = min_{|z|=r}|Phi_k| (grid + Lipschitz margin, Remark 3.1);
-  * upper bounds for the L^1-means I_r, J_r (grid + Lipschitz margin, Remark 3.1);
+  * lower bound for M_r = min_{|z|=r}|Phi_k| (grid + Lipschitz margin, Lemma 3.2);
+  * upper bounds for the L^1-means I_r, J_r (grid + Lipschitz margin, Lemma 3.2);
   * the bounds N_0 (all inequalities evaluated in ball arithmetic and accepted only if certainly true);
   * the discrete winding number.
 
@@ -14,7 +14,7 @@ subtracting a relative slack of 1e-12, and the grid sums use math.fsum with a fi
 These explicit safety factors absorb the rigorous IEEE-754 binary64 rounding error.
 
 Non-rigorous parts: the scan over r (numpy) to select the radius, and the high-precision 
-check of the identity (mpmath) for early values of n.
+check of the identity (mpmath) for 1 <= n <= N_0 + 10.
 """
 import math, sys, time
 import numpy as np
@@ -71,7 +71,7 @@ def N0_ball(k, alpha, d1, r, I, J, nmax=10**6):
         m = (lo+hi)//2
         if ok(m): hi = m
         else: lo = m
-    assert all(ok(n) for n in range(hi, hi+25))      # sanity (monotone by Lemma 4.1)
+    assert all(ok(n) for n in range(hi, hi+25))      # sanity (monotone by Lemma 4.2)
     return hi
 
 # ---------------------------------------------------------------- grid certificate on |z|=r
@@ -134,20 +134,21 @@ def scan_best_r(c, k, alpha, mu, d1, mode, N=400000, npts=25):
     return best
 
 def N0_float(k, a, d1, r, I, J):
+    """double-precision threshold used only to choose r; evaluated in log-space (no overflow)"""
+    la = math.log(a); lr = math.log(r)
     def ok(n):
-      try:
-        dl = I*r**(n+k-1)/(d1*a**n)
-        if dl >= 1: return False
+        ld = math.log(I) + (n+k-1)*lr - math.log(d1) - n*la     # log delta_n
+        if ld >= 0: return False
+        dl = math.exp(ld)
         H = dl*(a-1)/(a*(1-dl)*(1-r/a**2))
         if H >= 1: return False
-        return J*r**(n+k-2)+d1*a**(n-1)*(a-1)*H/(1-H) < 0.5
-      except OverflowError:
-        return True
+        B = J*r**(n+k-2) + I*(a-1)**2/(a**2*(1-r/a**2))*r**(n+k-1)/((1-dl)*(1-H))
+        return B < 0.5
     if ok(2): return 2
     hi = 4
     while not ok(hi):
         hi *= 2
-        if hi > 10**6: return None
+        if hi > 10**7: return None
     lo = hi//2
     while hi-lo > 1:
         m = (lo+hi)//2

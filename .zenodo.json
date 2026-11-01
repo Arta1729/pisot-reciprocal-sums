@@ -1,0 +1,11 @@
+{
+  "title": "verify_pisot.py: code for \"Effective Bounds for Reciprocal Sums of Higher-Order Linear Recurrences\"",
+  "upload_type": "software",
+  "description": "Python script accompanying the paper \"Effective Bounds for Reciprocal Sums of Higher-Order Linear Recurrences\" by A. Suna and P. K. Ray. It reproduces the constants and thresholds in Tables 1-3: root isolation, certified bounds for the minimum modulus and contour averages of the characteristic polynomial on |z| = r (ball arithmetic via python-flint, with the double-precision steps and slack described in the paper), the thresholds N_0, the root-free bound under Perron's condition, and high-precision numerical checks of the nearest-integer identity. Requires Python 3.9+, python-flint, numpy, mpmath (see requirements.txt).",
+  "creators": [
+    {"name": "Suna, Artatrana", "affiliation": "Government Women's College, Sambalpur, Odisha, India"},
+    {"name": "Ray, Prasanta Kumar", "affiliation": "Sambalpur University, Odisha, India"}
+  ],
+  "license": "mit",
+  "keywords": ["linear recurrence", "reciprocal sums", "Pisot polynomial", "ball arithmetic"]
+}
