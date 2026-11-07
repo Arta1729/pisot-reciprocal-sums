@@ -1,251 +1,191 @@
+#!/usr/bin/env python3
 """
-verify_pisot.py -- computations behind the tables in
-"Effective Bounds for Reciprocal Sums of Higher-Order Linear Recurrences".
+verify_rigorous.py -- root-sum certificate, sharp starting index n_*, and Perron root-free bound.
 
-Rigorous parts (python-flint ball arithmetic, arb/acb):
-  * isolation of the roots of Phi_k, enclosures of alpha, mu, d_1;
-  * lower bound for M_r = min_{|z|=r}|Phi_k| (grid + Lipschitz margin, Lemma 3.2);
-  * upper bounds for the L^1-means I_r, J_r (grid + Lipschitz margin, Lemma 3.2);
-  * the bounds N_0 (all inequalities evaluated in ball arithmetic and accepted only if certainly true);
-  * the discrete winding number.
-
-Floating-point parts (marked): per-point lower bounds |Phi(z_j)| are rounded to double precision after
-subtracting a relative slack of 1e-12, and the grid sums use math.fsum with a final relative slack 1e-9.
-These explicit safety factors absorb the rigorous IEEE-754 binary64 rounding error.
-
-Non-rigorous parts: the scan over r (numpy) to select the radius, and the high-precision 
-check of the identity (mpmath) for 1 <= n <= N_0 + 10.
+For each recurrence (k; c_1..c_k):
+  1. roots of Phi_k at 200 digits; a-posteriori Smith inclusion disks (rad_i = k|p(z_i)|/prod|z_i-z_j|);
+  2. constants  C0 >= sum_j |d_j| ,  C1 >= sum_j |d_j||1-alpha_j| ,  q >= mu  (all inflated by 1e-30 relative);
+  3. N0_root = least n>=2 with delta_n<1, H_n<1, B(n)<1/2   (Proposition 4.2 of the paper);
+  4. for every n < N0_root: enclosure of S_n = sum_{m>=n} 1/u_m  (exact finite sum + tail enclosure
+     A_M/(1+rho_M) <= tail <= A_M/(1-rho_M)), then test whether the enclosure of S_n^{-1}
+     lies strictly inside (u_n-u_{n-1}-1/2, u_n-u_{n-1}+1/2).
+Arithmetic: mpmath multiprecision, NOT interval arithmetic; rounding is controlled by working precision
+(>= 60 digits beyond what is needed) plus the 1e-30 inflations.  See README.
 """
-import math, sys, time
-import numpy as np
-from flint import fmpz_poly, arb, acb, fmpq, ctx
-import mpmath as mp
+import sys, math
+from mpmath import mp, mpf, mpc, polyroots, polyval, log10, findroot
 
-ctx.prec = 200
+CASES = [
+ ("Fibonacci",(1,1)),("Pell",(2,1)),("(A)",(3,1)),("Tribonacci",(1,1,1)),("(A)",(6,1,1)),
+ ("8-bonacci",(1,)*8),("30-bonacci",(1,)*30),("(B)",(3,2,2,1)),("(B)",(2,2,1,1,1)),
+ ("Narayana",(1,0,1)),("Pisot",(1,0,0,1))]
+INF = mpf(1)+mpf(10)**-30
 
-# ---------------------------------------------------------------- basic objects
-def phi_poly(c):
-    k = len(c); co = [0]*(k+1); co[k] = 1
-    for i, ci in enumerate(c, 1): co[k-i] = -ci
-    return fmpz_poly(co)
+def seq(c, N):
+    k=len(c); u=[0]*(k-1)+[0,1]   # u_{2-k..0}=0, u_1=1 ; index shift: u[i] = u_{i-(k-1)}
+    off=k-1
+    for n in range(2,N+1):
+        u.append(sum(c[j]*u[off+n-1-j] for j in range(k)))
+    return lambda m: u[off+m]
 
 def constants(c):
-    k = len(c); P = phi_poly(c)
-    rts = [z for z, m in P.complex_roots()]
-    assert len(rts) == k
-    rts.sort(key=lambda z: float(z.abs_upper()), reverse=True)
-    alpha = rts[0].real
-    assert alpha > 1, "dominant root not certainly > 1"
-    mu = max((z.abs_upper() for z in rts[1:]), key=lambda x: float(x))
-    assert mu < 1, "non-dominant roots not certainly inside the unit disc"
-    dphi = k*alpha**(k-1) - sum((k-i)*c[i-1]*alpha**(k-i-1) for i in range(1, k))
-    d1 = alpha**(k-2)/dphi
-    assert d1 > 0
-    return k, alpha, mu, d1
+    mp.dps=200; k=len(c)
+    coeffs=[1]+[-x for x in c]
+    rts=polyroots(coeffs,maxsteps=2000,extraprec=800)
+    p=lambda z: polyval(coeffs,z)
+    dp=lambda z: polyval([ (k-i)*coeffs[i] for i in range(k)],z)
+    rad=[]
+    for i,z in enumerate(rts):
+        den=mpf(1)
+        for j,w in enumerate(rts):
+            if j!=i: den*=abs(z-w)
+        rad.append(k*abs(p(z))/den)
+    ia=max(range(k),key=lambda i: rts[i].real if abs(rts[i].imag)<mpf(10)**-100 else -1)
+    alpha=rts[ia].real
+    assert alpha>1 and all(abs(rts[i])+rad[i]<1 for i in range(k) if i!=ia), "not Pisot?"
+    oth=[i for i in range(k) if i!=ia]
+    q=max(abs(rts[i])+rad[i] for i in oth)
+    d=lambda z: z**(k-2)/dp(z)
+    D=sum(abs(d(rts[i])) for i in oth); D1=sum(abs(d(rts[i]))*abs(1-rts[i]) for i in oth)
+    d1=1/sum((j*c[j-1])*alpha**(1-j) for j in range(1,k+1))
+    # consistency check d1 = alpha^{k-2}/Phi'(alpha)
+    assert abs(d1-d(alpha))<mpf(10)**-100*abs(d1)
+    return dict(k=k,alpha=alpha,q=q*INF,d1=d1/INF,C0=D*INF,C1=D1*INF/q,rad=max(rad),roots=rts,ia=ia,mu=max(abs(rts[i]) for i in oth))
+# note: |e_{m-1}-e_m| <= sum|d_j||1-a_j||a_j|^{m-1} <= (D1/q) q^m
 
-def u_list(c, N):
-    """returns list U with U[n]=u_n for n=0..N (u_0=0, u_1=1)"""
-    k = len(c); v = [0]*(k-1) + [1]          # v[i]=u_{i-(k-2)} : v[k-2]=u_0, v[k-1]=u_1
-    for n in range(2, N+1):
-        v.append(sum(c[j]*v[-1-j] for j in range(k)))
-    return v[k-2:]
+def Bfun(P,n,C0,C1,q):
+    a=P['alpha'];d1=P['d1']
+    dl=C0*q**n/(d1*a**n)
+    if dl>=1: return None
+    H=dl*(a-1)/(a*(1-dl)*(1-q/a**2))
+    if H>=1: return None
+    B=C1*q**n+C0*(a-1)**2*q**n/(a**2*(1-dl)*(1-H)*(1-q/a**2))
+    return dl,H,B
 
-# ---------------------------------------------------------------- bound N_0 (ball arithmetic)
-def N0_ball(k, alpha, d1, r, I, J, nmax=10**6):
-    """least n>=2 with delta_n<1, H_n<1, B(n)<1/2, all certainly true in ball arithmetic"""
-    half = arb(1)/2
+def N0_from(P,C0,C1,q,nmax=10**6):
+    lo=2
+    # all three quantities decrease -> bisection on first n where all hold
     def ok(n):
-        d = I*r**(n+k-1)/(d1*alpha**n)
-        if not d < 1: return False
-        H = d*(alpha-1)/(alpha*(1-d)*(1-r/alpha**2))
-        if not H < 1: return False
-        B = J*r**(n+k-2) + d1*alpha**(n-1)*(alpha-1)*H/(1-H)
-        return bool(B < half)
-    if ok(2): return 2
-    hi = 4
+        r=Bfun(P,n,C0,C1,q); return r is not None and r[2]<mpf(1)/2
+    hi=2
     while not ok(hi):
-        hi *= 2
-        if hi > nmax: return None
-    lo = hi//2
-    while hi-lo > 1:
-        m = (lo+hi)//2
-        if ok(m): hi = m
-        else: lo = m
-    assert all(ok(n) for n in range(hi, hi+25))      # sanity (monotone by Lemma 4.2)
-    return hi
+        hi*=2
+        if hi>nmax: return None
+    lo=hi//2 if hi>2 else 2
+    while lo<hi:
+        mid=(lo+hi)//2
+        if ok(mid): hi=mid
+        else: lo=mid+1
+    return lo
 
-# ---------------------------------------------------------------- grid certificate on |z|=r
-def grid_cert(c, r_q, N):
-    """r_q: fmpq. Returns dict with certified M_lb, I_plus, J_plus, winding data."""
-    k = len(c); old = ctx.prec; ctx.prec = 100
-    r = arb(r_q)
-    zs = []
-    P_abs_lb = np.empty(N); mids = np.empty(N, dtype=complex)
-    twopi = 2*arb.pi()
-    for j in range(N):
-        z = r*acb(0, twopi*j/N).exp()
-        p = acb(1)
-        for i in range(k):                    # Horner for z^k - c1 z^{k-1} - ... - ck
-            p = p*z - c[i]
-        lbj = p.abs_lower()
-        P_abs_lb[j] = float(lbj.mid()) - float(lbj.rad())
-        mids[j] = complex(float(p.real.mid()), float(p.imag.mid()))
-    P_abs_lb *= (1 - 1e-12)
-    L = k*r**(k-1) + sum((k-i)*abs(c[i-1])*r**(k-i-1) for i in range(1, k))
-    eps = float(L.upper())*math.pi*float(r.upper())/N*(1 + 1e-9)
-    m = float(P_abs_lb.min())
-    ok = m > eps
-    M_lb = m - eps if ok else 0.0
-    out = {"ok": ok, "M_lb": M_lb, "min_grid": m, "eps": eps}
-    if ok:
-        denom = P_abs_lb - eps
-        rf = float(r.upper())
-        th = 2*np.pi*np.arange(N)/N
-        one_minus = np.abs(1 - rf*np.exp(1j*th)) + math.pi*rf/N
-        out["I_plus"] = math.fsum(1.0/denom)/N*(1+1e-9)
-        out["J_plus"] = math.fsum(one_minus/denom)/N*(1+1e-9)
-        ang = np.angle(np.roll(mids, -1)/mids)
-        out["winding"] = int(round(float(ang.sum())/(2*np.pi)))
-        out["max_step"] = float(np.abs(ang).max())
-    ctx.prec = old
+def sharp_index(c,P,N0):
+    k=len(c); a=P['alpha']; d1=P['d1']; q=P['q']; C0=P['C0']
+    M=2*N0+60
+    mp.dps=int(2*M*float(log10(a)))+80
+    u=seq(c,M+2)
+    # tail enclosure at M
+    rho=C0*q**M/(d1*a**M)
+    assert rho<mpf(10)**-6
+    A=1/(d1*a**(M-1)*(a-1))
+    T_lo=A/(1+rho); T_hi=A/(1-rho)
+    S_lo=T_lo; S_hi=T_hi
+    fail=[]; undecided=[]
+    for n in range(M-1,0,-1):
+        t=mpf(1)/u(n)
+        S_lo+=t; S_hi+=t
+        if n<N0:
+            tgt=u(n)-u(n-1)
+            lo=1/S_hi; hi=1/S_lo
+            if lo>tgt-mpf(1)/2 and hi<tgt+mpf(1)/2: pass
+            elif hi<=tgt-mpf(1)/2 or lo>=tgt+mpf(1)/2: fail.append(n)
+            else: undecided.append(n)
+    nstar = (max(fail)+1) if fail else 1
+    return nstar,fail,undecided,M
+
+def perron(c):
+    k=len(c); S=sum(abs(x) for x in c[1:]); c1=c[0]
+    assert c1>1+S
+    r=mpf(S+1)/c1; r=r**(mpf(1)/(k-1)); Ms=1-r**k
+    am = c1 if all(x>=0 for x in c[1:]) else c1-1
+    th=1-r/am**2
+    out={}
+    for tag in ("old","new"):
+        n=2
+        while True:
+            if tag=="old":
+                dl=r**(n+k-1)*(c1+1+r)**(k-1)/(Ms*am**(n+k-2))
+            else:
+                dl=r**(n+k-1)*(c1+2*mpf(S)/am)/(Ms*am**n)   # d1 >= 1/(c1+2S/alpha_-)
+            if dl<1:
+                H=dl/((1-dl)*th)
+                if H<1:
+                    B=r**(n+k-2)*(1+r)/Ms+r**(n+k-1)/(Ms*th*(1-dl)*(1-H))
+                    if B<mpf(1)/2: out[tag]=n;break
+            n+=1
     return out
 
-def to_arb(x): return arb(x)
 
-# ---------------------------------------------------------------- float scan to choose r (not rigorous)
-def scan_best_r(c, k, alpha, mu, d1, mode, N=400000, npts=25):
-    a = float(alpha.mid()); m_ = float(mu.upper()); d = float(d1.mid())
-    th = np.arange(N)*2*np.pi/N
-    best = (10**18, None)
-    for t in np.linspace(0.02, 0.98, npts):
-        r = m_ + (1-m_)*t
-        z = r*np.exp(1j*th)
-        p = z**k - sum(c[j]*z**(k-1-j) for j in range(k))
-        ap = np.abs(p)
-        L = k*r**(k-1)+sum((k-1-j)*abs(c[j])*r**(k-2-j) for j in range(k-1))
-        eps = L*math.pi*r/N*1.01
-        if ap.min() <= 2*eps: continue
-        if mode == "sup":
-            I = 1/(ap.min()-eps); J = (1+r)*I
-        else:
-            I = np.mean(1/(ap-eps)); J = np.mean((np.abs(1-z)+math.pi*r/N)/(ap-eps))
-        n = N0_float(k, a, d, r, I, J)
-        if n is not None and n < best[0]: best = (n, r)
-    return best
+def kappa2_and_Theta(c,P):
+    """k=2 helper: kappa_2, alpha_2, and N_par (Remark on effective parity)."""
+    mp.dps=200
+    a=P['alpha']; z=[P['roots'][i] for i in range(2) if i!=P['ia']][0].real
+    kap=-(a-z)/(a**2-z); q=P['q']; C0,C1=P['C0'],P['C1']; d1=P['d1']
+    def Theta(n):
+        r=Bfun(P,n,C0,C1,q)
+        if r is None: return None
+        dl,H,B=r
+        return ((a-1)/a)**2*C0*q**n/(1-dl)*(dl/(1-q**2/a**3)+H/((1-H)*(1-q/a**2)))
+    n=2
+    while True:
+        th=Theta(n); r=Bfun(P,n,C0,C1,q)
+        if th is not None and r[2]<mpf(1)/2 and abs(kap)*abs(z)**(n-1)>th: return kap,z,n
+        n+=1
 
-def N0_float(k, a, d1, r, I, J):
-    """double-precision threshold used only to choose r; evaluated in log-space (no overflow)"""
-    la = math.log(a); lr = math.log(r)
-    def ok(n):
-        ld = math.log(I) + (n+k-1)*lr - math.log(d1) - n*la     # log delta_n
-        if ld >= 0: return False
-        dl = math.exp(ld)
-        H = dl*(a-1)/(a*(1-dl)*(1-r/a**2))
-        if H >= 1: return False
-        B = J*r**(n+k-2) + I*(a-1)**2/(a**2*(1-r/a**2))*r**(n+k-1)/((1-dl)*(1-H))
-        return B < 0.5
-    if ok(2): return 2
-    hi = 4
-    while not ok(hi):
-        hi *= 2
-        if hi > 10**7: return None
-    lo = hi//2
-    while hi-lo > 1:
-        m = (lo+hi)//2
-        if ok(m): hi = m
-        else: lo = m
-    return hi
 
-# ---------------------------------------------------------------- Perron closed form (Theorem 1.3)
-def perron_N0(c, nmax=100000):
-    k = len(c); c1 = c[0]; S = sum(abs(x) for x in c[1:])
-    assert c[-1] != 0 and c1 > 1 + S
-    r = (arb(S+1)/c1)**(arb(1)/(k-1))
-    am = arb(c1) if all(x >= 0 for x in c[1:]) else arb(c1-1)
-    Ms = 1 - r**k
-    half = arb(1)/2
-    def ok(n):
-        dt = r**(n+k-1)*(c1+1+r)**(k-1)/(Ms*am**(n+k-2))
-        if not dt < 1: return False
-        Ht = dt/((1-dt)*(1-r/am**2))
-        if not Ht < 1: return False
-        B = r**(n+k-2)*(1+r)/Ms + r**(n+k-1)/(Ms*(1-r/am**2)*(1-dt)*(1-Ht))
-        return bool(B < half)
-    n = 2
-    hi = 2
-    while not ok(hi):
-        hi = hi*2 if hi > 2 else 4
-        if hi > nmax: return None
-    lo = max(2, hi//2)
-    if ok(2): return 2
-    while hi-lo > 1:
-        m = (lo+hi)//2
-        if ok(m): hi = m
-        else: lo = m
-    assert all(ok(n) for n in range(hi, hi+25))
-    return hi
+def radii_report():
+    """Per recurrence: largest inclusion radius, margin 1-q (q before inflation), disjointness of disks."""
+    mp.dps=200
+    out=[]
+    for name,c in CASES:
+        P=constants(c); mp.dps=200
+        rts=P['roots']; k=len(c)
+        coeffs=[1]+[-x for x in c]
+        rad=[]
+        for i,z in enumerate(rts):
+            den=mpf(1)
+            for j,w in enumerate(rts):
+                if j!=i: den*=abs(z-w)
+            rad.append(k*abs(polyval(coeffs,z))/den)
+        disjoint=all(abs(rts[i]-rts[j])>rad[i]+rad[j] for i in range(k) for j in range(i+1,k))
+        out.append((name,k,max(rad),1-P['q']/INF,disjoint))
+        print("%-11s k=%-3d max_radius=%s  1-q=%s  disjoint=%s"%(name,k,mp.nstr(max(rad),3),mp.nstr(1-P['q']/INF,4),disjoint),flush=True)
+    return out
 
-# ---------------------------------------------------------------- identity check (mpmath, not rigorous)
-def identity_check(c, alpha_f, Nmax):
-    mp.mp.dps = int(Nmax*math.log10(alpha_f)) + 80
-    start = 2*Nmax + 400
-    U = u_list(c, start+400)
-    S = sum(mp.mpf(1)/U[m] for m in range(start, start+401))
-    errs = {}
-    for n in range(start-1, 0, -1):
-        S += mp.mpf(1)/U[n]
-        if n <= Nmax: errs[n] = abs(1/S - (U[n]-U[n-1]))
-    mp.mp.dps = 30
-    first = min(n for n in range(1, Nmax+1) if all(errs[m] < mp.mpf(1)/2 for m in range(n, Nmax+1)))
-    mx = float(max(errs[n] for n in range(3, Nmax+1)))
-    return first, mx, float(errs[1]), float(errs[2])
-
-N0_SUP_MID = {(1,1):11,(2,1):5,(3,1):3,(1,1,1):16,(6,1,1):2,(1,)*8:97,(1,)*30:4961,(3,2,2,1):10,(2,2,1,1,1):16,(1,0,1):29,(1,0,0,1):117}
-ROWS = [("Fibonacci", [1,1]), ("Pell", [2,1]), ("A", [3,1]), ("Tribonacci", [1,1,1]), ("A", [6,1,1]),
-        ("8-bonacci", [1]*8), ("30-bonacci", [1]*30), ("B", [3,2,2,1]), ("B", [2,2,1,1,1]),
-        ("Narayana", [1,0,1]), ("Pisot", [1,0,0,1])]
-
-if __name__ == "__main__":
-    which = sys.argv[1] if len(sys.argv) > 1 else "all"
-    NGRID = int(sys.argv[2]) if len(sys.argv) > 2 else 10**6
-    if which in ("all", "table"):
-        sel = [int(x) for x in sys.argv[3].split(",")] if len(sys.argv) > 3 else range(len(ROWS))
-        for name, c in [ROWS[i] for i in sel]:
-            t0 = time.time()
-            k, alpha, mu, d1 = constants(c)
-            res = {}
-            r_mid = fmpq(int(round((1+float(mu.upper()))/2*10**6)), 10**6)
-            g = grid_cert(c, r_mid, NGRID)
-            assert g["ok"] and g["winding"] == k-1 and g["max_step"] < math.pi/2, (name, c, g)
-            r = arb(r_mid)
-            Msup = arb(g["M_lb"])
-            res["sup_mid"] = N0_ball(k, alpha, d1, r, 1/Msup, (1+r)/Msup)
-            M32 = (alpha-r)*(r-mu)**(k-1)
-            res["lb32"] = N0_ball(k, alpha, d1, r, 1/M32, (1+r)/M32)
-            res["L1_mid"] = N0_ball(k, alpha, d1, r, arb(g["I_plus"]), arb(g["J_plus"]))
-            for mode, key in (("sup", "sup_best"), ("L1", "L1_best")):
-                nb, rb = scan_best_r(c, k, alpha, mu, d1, mode)
-                rq = fmpq(int(round(rb*10**6)), 10**6)
-                gb = grid_cert(c, rq, NGRID)
-                if gb["ok"] and gb["winding"] == k-1 and float(mu.upper()) < rb:
-                    rr = arb(rq)
-                    if mode == "sup":
-                        Mb = arb(gb["M_lb"]); res[key] = N0_ball(k, alpha, d1, rr, 1/Mb, (1+rr)/Mb)
-                    else:
-                        res[key] = N0_ball(k, alpha, d1, rr, arb(gb["I_plus"]), arb(gb["J_plus"]))
-                    res[key+"_r"] = float(rq)
-            print(name, c, "alpha=%s mu<=%s d1=%s r=%s M_lb=%.5f I+=%.4f J+=%.4f 1/M=%.3f" % (
-                  alpha.str(10, radius=False), mu.str(6, radius=False), d1.str(8, radius=False), float(r_mid),
-                  g["M_lb"], g["I_plus"], g["J_plus"], 1/g["M_lb"]), res, "%.0fs" % (time.time()-t0), flush=True)
-    if which in ("all", "perron"):
-        for c in ([3,1], [6,1,1], [3,0,1], [3,0,0,1], [11]+[0]*8+[1], [5,-1,0,1], [5,1,1,1]):
-            print("Perron closed form", c, perron_N0(c), flush=True)
-    if which in ("all", "identity"):
-        extra = [[3,0,1], [3,0,0,1], [5,-1,0,1]]
-        sel = [int(x) for x in sys.argv[3].split(",")] if len(sys.argv) > 3 else None
-        allrows = ROWS + [("extra", e) for e in extra]
-        for name, c in (allrows if sel is None else [allrows[i] for i in sel]):
-            k, alpha, mu, d1 = constants(c)
-            N0c = N0_SUP_MID.get(tuple(c), 120) + 10
-            Nmax = max(40, N0c)
-            print(name, c, "identity: first n, max err(3..Nmax), err1, err2 =", identity_check(c, float(alpha.mid()), Nmax), flush=True)
+if __name__=="__main__":
+    import sys
+    if len(sys.argv)>1 and sys.argv[1]=="--radii":
+        radii_report(); sys.exit(0)
+    out=[]
+    def pr(*a):
+        s=" ".join(str(x) for x in a); print(s,flush=True); out.append(s)
+    mp.dps=60
+    pr("== Perron root-free bound: N0^exp (Theorem 1.3, d1 >= 1/(c1+2*sigma/alpha_-)) ; old d1-bound gives ==")
+    PERRON=[(3,1),(6,1,1),(3,0,1),(3,0,0,1),(5,-1,0,1)]
+    for c in PERRON: pr(c, perron(c))
+    pr("== root-sum certificate (Prop. 4.3) and sharp starting index n_* ==")
+    pr("%-11s %-4s %8s %8s %6s  %s"%("family","k","N0_root","n_star","M","fails<N0 / undecided"))
+    rows=[]
+    for name,c in CASES+[("(A)",x) for x in PERRON[2:]]:
+        P=constants(c); C0,C1,q=P['C0'],P['C1'],P['q']
+        N0=N0_from(P,C0,C1,q); mp.dps=200
+        ns,fail,und,M=sharp_index(c,P,N0)
+        mp.dps=200
+        pr("%-11s k=%-3d %8d %8d %6d  fails=%s und=%s"%(name,len(c),N0,ns,M,fail[:8],und[:8]))
+        pr("    c=%s alpha=%s mu=%s d1=%s C0=%s C1=%s"%(c if len(c)<9 else "(1)^%d"%len(c),mp.nstr(P['alpha'],8),mp.nstr(P['mu'],8),mp.nstr(P['d1'],8),mp.nstr(C0,6),mp.nstr(C1,6)))
+    pr("== effective parity index N_par (k=2) ==")
+    for c in [(1,1),(2,1),(3,1),(3,-1),(6,-1),(4,-2),(5,-3)]:
+        try:
+            P=constants(c); kap,z,n=kappa2_and_Theta(c,P)
+            pr(c,"alpha_2=",mp.nstr(z,8),"kappa_2=",mp.nstr(kap,8),"N_par=",n)
+        except AssertionError: pr(c,"not Pisot")
+    open("tables_generated.txt","w").write("\n".join(out))
