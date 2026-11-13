@@ -1,0 +1,11 @@
+Fibonacci   k=2   max_radius=1.46e-201  1-q=0.382  disjoint=True
+Pell        k=2   max_radius=3.46e-201  1-q=0.5858  disjoint=True
+(A)         k=2   max_radius=0.0  1-q=0.6972  disjoint=True
+Tribonacci  k=3   max_radius=1.34e-201  1-q=0.2626  disjoint=True
+(A)         k=3   max_radius=6.68e-201  1-q=0.598  disjoint=True
+8-bonacci   k=8   max_radius=2.71e-201  1-q=0.05281  disjoint=True
+30-bonacci  k=30  max_radius=1.7e-200  1-q=0.001529  disjoint=True
+(B)         k=4   max_radius=6.73e-201  1-q=0.2809  disjoint=True
+(B)         k=5   max_radius=2.19e-201  1-q=0.2153  disjoint=True
+Narayana    k=3   max_radius=6.34e-202  1-q=0.174  disjoint=True
+Pisot       k=4   max_radius=9.85e-202  1-q=0.05956  disjoint=True

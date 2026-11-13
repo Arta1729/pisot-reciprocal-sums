@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite the accompanying paper and this record."
-title: "verify_pisot.py: code for 'Effective Bounds for Reciprocal Sums of Higher-Order Linear Recurrences'"
+title: "Code for 'Reciprocal sums of Pisot linear recurrences: effective rounding and the asymptotics of the error'"
 type: software
 authors:
   - family-names: Suna
@@ -9,11 +9,14 @@ authors:
   - family-names: Ray
     given-names: Prasanta Kumar
     affiliation: "Sambalpur University, Odisha, India"
-version: "1.2"
+version: "1.5"
+date-released: "2026-11-13"
 license: MIT
 repository-code: "https://github.com/Arta1729/pisot-reciprocal-sums"
+# doi: add the version DOI here after Zenodo has minted it
 keywords:
   - linear recurrence
   - reciprocal sums
   - Pisot polynomial
-  - ball arithmetic
+  - Binet formula
+  - rounding error

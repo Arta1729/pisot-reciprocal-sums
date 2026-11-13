@@ -1,0 +1,50 @@
+== 1. Table 4: exact E_n versus the root sum ==
+ [1, 1]           n=  3  E_n=-0.264644  root sum=-0.263932
+ [1, 1]           n=  5  E_n=-0.100854  root sum=-0.100813
+ [1, 1]           n=  8  E_n=0.0237982  root sum=0.0237987
+ [1, 1]           n= 12  E_n=0.00347219  root sum=0.00347219
+ [2, 1]           n=  3  E_n=-0.0777584  root sum=-0.0777366
+ [2, 1]           n=  6  E_n=0.00552456  root sum=0.00552457
+ [3, -1]          n=  4  E_n=-0.0192541  root sum=-0.0192536
+ [3, -1]          n= 10  E_n=-5.97943e-5  root sum=-5.97943e-5
+ [1, 1, 1]        n=  6  E_n=-0.0607682  root sum=-0.0607544
+ [1, 1, 1]        n= 16  E_n=0.00120433  root sum=0.00120433
+ [1, 1, 1]        n= 24  E_n=-0.000640585  root sum=-0.000640585
+ [1, 0, 1]        n= 10  E_n=0.0542536  root sum=0.0542828
+ [1, 0, 1]        n= 20  E_n=0.0130394  root sum=0.0130394
+ [5, -1, 0, 1]    n=  3  E_n=-0.00684852  root sum=-0.00683692
+ [5, -1, 0, 1]    n=  6  E_n=0.00306873  root sum=0.00306873
+== 2. Table 5: E_n - root sum versus the quadratic term ==
+ [1, 1]     n=  8  E-M=-5.3445e-7  quadratic=-5.3435e-7  (E-M-Q)=-1.04e-10
+ [1, 1]     n= 12  E-M=-1.6595e-9  quadratic=-1.6595e-9  (E-M-Q)=-6.87e-15
+ [1, 1, 1]  n= 10  E-M=-4.7052e-7  quadratic=-4.7054e-7  (E-M-Q)=1.84e-11
+ [1, 1, 1]  n= 16  E-M=-1.3855e-10  quadratic=-1.3855e-10  (E-M-Q)=-5.11e-18
+ [1, 0, 1]  n= 20  E-M=-1.4829e-8  quadratic=-1.4829e-8  (E-M-Q)=-1.16e-13
+ [1, 0, 1]  n= 30  E-M=-6.6144e-12  quadratic=-6.6144e-12  (E-M-Q)=-1.75e-19
+== 3. Observation (iv): Tribonacci signs, 20<=n<=330 ==
+ cases=311  proportion E_n>0 = 0.5048  sign disagreements with the root sum = 0
+ theta/pi = 0.69271665
+== 4. k-generalized Fibonacci at small n (last four rows of Table 4) ==
+ 5-bonacci  n=  7  E_n=0.241836  root sum=0.241845
+ 8-bonacci  n= 10  E_n=0.249018  root sum=0.249018
+ 12-bonacci n= 14  E_n=0.249939  root sum=0.249939
+ 30-bonacci n= 32  E_n=0.25  root sum=0.25
+== 4b. Observation (v): worst |E_n - root sum| over 2<=n<=60 for k-bonacci ==
+ k= 2  worst = 0.0033 at n=2
+ k= 3  worst = 0.00194 at n=2
+ k= 4  worst = 0.000711 at n=3
+ k= 5  worst = 0.000379 at n=6
+ k= 6  worst = 0.000211 at n=7
+ k= 7  worst = 0.000112 at n=8
+ k= 8  worst = 5.81e-5 at n=9
+ k= 9  worst = 2.97e-5 at n=10
+ k=10  worst = 1.5e-5 at n=11
+ k=11  worst = 7.56e-6 at n=12
+ k=12  worst = 3.8e-6 at n=13
+ k=16  worst = 2.38e-7 at n=17
+ k=20  worst = 1.49e-8 at n=21
+== 5. Closed form of E_n for 3<=n<=k+1 ==
+ k= 3  Delta_k/(3*4^-k)=1.30622   closed form exact to 1e-80 for 3<=n<=k+1;  E_(k+2)=0.213067
+ k= 5  Delta_k/(3*4^-k)=1.06117   closed form exact to 1e-80 for 3<=n<=k+1;  E_(k+2)=0.241836
+ k= 8  Delta_k/(3*4^-k)=1.00722   closed form exact to 1e-80 for 3<=n<=k+1;  E_(k+2)=0.249018
+ k=12  Delta_k/(3*4^-k)=1.00045   closed form exact to 1e-80 for 3<=n<=k+1;  E_(k+2)=0.249939

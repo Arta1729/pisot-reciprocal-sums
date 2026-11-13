@@ -1,0 +1,28 @@
+== (a) max |E_n| over 3<=n<=59 (119 for k=30) ==
+ Fibonacci      0.2646
+ Pell           0.07776
+ (2;3,1)        0.02948
+ Tribonacci     0.2182
+ (3;6,1,1)      0.02161
+ 8-bonacci      0.249
+ 30-bonacci     0.25
+ (4;3,2,2,1)    0.06166
+ (5;2,2,1,1,1)  0.1056
+ Narayana       0.3841
+ (4;1,0,0,1)    0.4411
+== (b) Tribonacci: deviation from the leading cosine, 3<=n<=45 ==
+ max deviation = 0.00297
+== (c) (1/2 - x_k) 4^k ==
+ k= 2  1.22
+ k= 3  0.95056
+ k= 4  0.84278
+ k= 6  0.7719
+ k=12  0.75034
+ k=30  0.75
+ k=40  0.75
+== (d) (1-mu) k^3 for F^(k) ==
+  k=10: 31.85, k=20: 40.23, k=40: 41.29, k=80: 40.7, k=160: 40.16
+ k=8  N0_root=14  N0_root*(1-mu)=0.739
+ k=30  N0_root=447  N0_root*(1-mu)=0.683
+== (e) single conjugate pair of maximal modulus ==
+ failures: []   smallest gap to the next modulus: 0.00173 (F40)

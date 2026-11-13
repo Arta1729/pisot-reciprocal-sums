@@ -1,0 +1,44 @@
+== Perron root-free index N0^exp (alpha_- = c_1 - 1) ==
+(3, 1) r=0.6667 N0_exp=6
+(6, 1, 1) r=0.7071 N0_exp=5
+(3, 0, 1) r=0.8165 N0_exp=12
+(3, 0, 0, 1) r=0.8736 N0_exp=18
+(5, -1, 0, 1) r=0.8434 N0_exp=13
+== root-sum certificate and least starting index n_* ==
+family      k     N0_root   n_star      M  fails<N0 / undecided
+Fibonacci   k=2          2        2     64  fails=[1] und=[]
+    c=(1, 1) alpha=1.618034 mu=0.61803399 d1=0.4472136 C0=0.447214 C1=1.17082
+Pell        k=2          2        1     64  fails=[] und=[]
+    c=(2, 1) alpha=2.4142136 mu=0.41421356 d1=0.35355339 C0=0.353553 C1=1.20711
+(A)         k=2          2        1     64  fails=[] und=[]
+    c=(3, 1) alpha=3.3027756 mu=0.30277564 d1=0.2773501 C0=0.27735 C1=1.19338
+Tribonacci  k=3          4        2     68  fails=[1] und=[]
+    c=(1, 1, 1) alpha=1.8392868 mu=0.73735271 d1=0.33622812 C0=0.51998 C1=1.08861
+(A)         k=3          2        1     64  fails=[] und=[]
+    c=(6, 1, 1) alpha=6.1877281 mu=0.40200772 d1=0.15621158 C0=0.163405 C1=0.472161
+8-bonacci   k=8         14        2     88  fails=[1] und=[]
+    c=(1, 1, 1, 1, 1, 1, 1, 1) alpha=1.9960312 mu=0.94718711 d1=0.25403999 C0=0.572157 C1=0.864878
+30-bonacci  k=30       447        2    954  fails=[1] und=[]
+    c=(1)^30 alpha=2.0 mu=0.99847135 d1=0.25 C0=0.563588 C1=0.802908
+(B)         k=4          2        1     64  fails=[] und=[]
+    c=(3, 2, 2, 1) alpha=3.7051382 mu=0.71905324 d1=0.21761441 C0=0.318171 C1=0.605135
+(B)         k=5          3        1     66  fails=[] und=[]
+    c=(2, 2, 1, 1, 1) alpha=2.8738157 mu=0.78466244 d1=0.25018993 C0=0.402308 C1=0.748412
+Narayana    k=3          5        2     70  fails=[1] und=[]
+    c=(1, 0, 1) alpha=1.4655712 mu=0.82603136 d1=0.41723799 C0=0.556106 C1=0.98666
+Pisot       k=4         12        2     84  fails=[1] und=[]
+    c=(1, 0, 0, 1) alpha=1.3802776 mu=0.94043568 d1=0.39665064 C0=0.632251 C1=0.912806
+(A)         k=3          2        1     64  fails=[] und=[]
+    c=(3, 0, 1) alpha=3.1038034 mu=0.56761374 d1=0.30198614 C0=0.313235 C1=0.658984
+(A)         k=4          2        1     64  fails=[] und=[]
+    c=(3, 0, 0, 1) alpha=3.0357441 mu=0.71215291 d1=0.31816974 C0=0.330526 C1=0.523958
+(A)         k=4          2        1     64  fails=[] und=[]
+    c=(5, -1, 0, 1) alpha=4.8007367 mu=0.63806063 d1=0.21647132 C0=0.216612 C1=0.333916
+== effective parity index N_par (k=2) and direct floor-rule check, 2<=n<=59 ==
+(1, 1) alpha_2= -0.61803399 kappa_2= -0.69098301 N_par= 2 floor-rule violations: []
+(2, 1) alpha_2= -0.41421356 kappa_2= -0.45308184 N_par= 2 floor-rule violations: []
+(3, 1) alpha_2= -0.30277564 kappa_2= -0.32160541 N_par= 2 floor-rule violations: []
+(3, -1) alpha_2= 0.38196601 kappa_2= -0.3454915 N_par= 2 floor-rule violations: []
+(6, -1) alpha_2= 0.17157288 kappa_2= -0.16736755 N_par= 2 floor-rule violations: []
+(4, -2) alpha_2= 0.58578644 kappa_2= -0.25547916 N_par= 2 floor-rule violations: []
+(5, -3) alpha_2= 0.69722436 kappa_2= -0.20236972 N_par= 2 floor-rule violations: []

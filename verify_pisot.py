@@ -1,16 +1,24 @@
 #!/usr/bin/env python3
 """
-verify_rigorous.py -- root-sum certificate, sharp starting index n_*, and Perron root-free bound.
+verify_pisot.py -- code accompanying "Reciprocal sums of Pisot linear recurrences: effective rounding
+and the asymptotics of the error" (A. Suna, P. K. Ray).
+
+Reproduces the computer-assisted tables of the paper (root-sum constants, N_0^root, least starting
+index n_*, root-free Perron index N_0^exp, and the parity indices N_par).
 
 For each recurrence (k; c_1..c_k):
   1. roots of Phi_k at 200 digits; a-posteriori Smith inclusion disks (rad_i = k|p(z_i)|/prod|z_i-z_j|);
-  2. constants  C0 >= sum_j |d_j| ,  C1 >= sum_j |d_j||1-alpha_j| ,  q >= mu  (all inflated by 1e-30 relative);
-  3. N0_root = least n>=2 with delta_n<1, H_n<1, B(n)<1/2   (Proposition 4.2 of the paper);
-  4. for every n < N0_root: enclosure of S_n = sum_{m>=n} 1/u_m  (exact finite sum + tail enclosure
-     A_M/(1+rho_M) <= tail <= A_M/(1-rho_M)), then test whether the enclosure of S_n^{-1}
+  2. constants  C0 >= sum_j |d_j| ,  C1 >= sum_j |d_j||1-alpha_j| ,  q >= mu  (inflated by 1+1e-30);
+  3. N0_root = least n>=2 with delta_n<1, H_n<1, B(n)<1/2   (Corollary on N_0, Section 4);
+  4. for every n < N0_root: enclosure of S_n = sum_{m>=n} 1/u_m (exact finite sum plus the tail enclosure
+     T_M/(1+delta_M) <= tail <= T_M/(1-delta_M)), then test whether the enclosure of S_n^{-1}
      lies strictly inside (u_n-u_{n-1}-1/2, u_n-u_{n-1}+1/2).
-Arithmetic: mpmath multiprecision, NOT interval arithmetic; rounding is controlled by working precision
-(>= 60 digits beyond what is needed) plus the 1e-30 inflations.  See README.
+Arithmetic: mpmath multiprecision floating point, NOT interval arithmetic; rounding errors are controlled by
+the working precision (>= 60 digits beyond what is needed) and the 1e-30 inflations, not formally tracked.
+The results are therefore computer-assisted, not formally certified.
+
+Usage:  python3 verify_pisot.py            # all tables, also written to tables_generated.txt
+        python3 verify_pisot.py --radii    # inclusion radii and the margins 1-q
 """
 import sys, math
 from mpmath import mp, mpf, mpc, polyroots, polyval, log10, findroot
@@ -103,26 +111,22 @@ def sharp_index(c,P,N0):
     return nstar,fail,undecided,M
 
 def perron(c):
+    """Root-free index N_0^exp (Perron case): depends only on (k; c_1..c_k); alpha_- = c_1 - 1."""
     k=len(c); S=sum(abs(x) for x in c[1:]); c1=c[0]
     assert c1>1+S
-    r=mpf(S+1)/c1; r=r**(mpf(1)/(k-1)); Ms=1-r**k
-    am = c1 if all(x>=0 for x in c[1:]) else c1-1
+    r=(mpf(S+1)/c1)**(mpf(1)/(k-1)); Ms=1-r**k
+    am=c1-1
     th=1-r/am**2
-    out={}
-    for tag in ("old","new"):
-        n=2
-        while True:
-            if tag=="old":
-                dl=r**(n+k-1)*(c1+1+r)**(k-1)/(Ms*am**(n+k-2))
-            else:
-                dl=r**(n+k-1)*(c1+2*mpf(S)/am)/(Ms*am**n)   # d1 >= 1/(c1+2S/alpha_-)
-            if dl<1:
-                H=dl/((1-dl)*th)
-                if H<1:
-                    B=r**(n+k-2)*(1+r)/Ms+r**(n+k-1)/(Ms*th*(1-dl)*(1-H))
-                    if B<mpf(1)/2: out[tag]=n;break
-            n+=1
-    return out
+    C0=r**(k-1)/Ms; C1=(1+r)*r**(k-2)/Ms
+    n=2
+    while True:
+        dl=C0*(c1+2*mpf(S)/am)*(r/am)**n
+        if dl<1:
+            H=dl/((1-dl)*th)
+            if H<1:
+                B=C1*r**n+C0*r**n/(th*(1-dl)*(1-H))
+                if B<mpf(1)/2: return r,n
+        n+=1
 
 
 def kappa2_and_Theta(c,P):
@@ -140,6 +144,27 @@ def kappa2_and_Theta(c,P):
         th=Theta(n); r=Bfun(P,n,C0,C1,q)
         if th is not None and r[2]<mpf(1)/2 and abs(kap)*abs(z)**(n-1)>th: return kap,z,n
         n+=1
+
+
+def floor_rule_check(c, nmax=59):
+    """k=2: check floor(S_n^{-1}) = u_n-u_{n-1}-[n odd] (c_2>0) or u_n-u_{n-1}-1 (c_2<0) for 2<=n<=nmax."""
+    from mpmath import floor
+    al=constants(c)['alpha']
+    D=2*int(nmax*float(log10(al)))+80
+    mp.dps=D+60
+    M=nmax+1
+    u=seq(c,M)
+    while u(M)<=mpf(10)**(D+25):
+        M*=2; u=seq(c,M)
+    bad=[]
+    for n in range(2,nmax+1):
+        S=sum(mpf(1)/u(m) for m in range(n,M+1))
+        t=u(n)-u(n-1)
+        fl=int(floor(1/S))
+        exp=t-(1 if n%2 else 0) if c[1]>0 else t-1
+        if fl!=exp: bad.append(n)
+    mp.dps=200
+    return bad
 
 
 def radii_report():
@@ -169,10 +194,10 @@ if __name__=="__main__":
     def pr(*a):
         s=" ".join(str(x) for x in a); print(s,flush=True); out.append(s)
     mp.dps=60
-    pr("== Perron root-free bound: N0^exp (Theorem 1.3, d1 >= 1/(c1+2*sigma/alpha_-)) ; old d1-bound gives ==")
+    pr("== Perron root-free index N0^exp (alpha_- = c_1 - 1) ==")
     PERRON=[(3,1),(6,1,1),(3,0,1),(3,0,0,1),(5,-1,0,1)]
-    for c in PERRON: pr(c, perron(c))
-    pr("== root-sum certificate (Prop. 4.3) and sharp starting index n_* ==")
+    for c in PERRON: pr(c, "r=%s"%mp.nstr(perron(c)[0],4), "N0_exp=%d"%perron(c)[1])
+    pr("== root-sum certificate and least starting index n_* ==")
     pr("%-11s %-4s %8s %8s %6s  %s"%("family","k","N0_root","n_star","M","fails<N0 / undecided"))
     rows=[]
     for name,c in CASES+[("(A)",x) for x in PERRON[2:]]:
@@ -182,10 +207,11 @@ if __name__=="__main__":
         mp.dps=200
         pr("%-11s k=%-3d %8d %8d %6d  fails=%s und=%s"%(name,len(c),N0,ns,M,fail[:8],und[:8]))
         pr("    c=%s alpha=%s mu=%s d1=%s C0=%s C1=%s"%(c if len(c)<9 else "(1)^%d"%len(c),mp.nstr(P['alpha'],8),mp.nstr(P['mu'],8),mp.nstr(P['d1'],8),mp.nstr(C0,6),mp.nstr(C1,6)))
-    pr("== effective parity index N_par (k=2) ==")
+    pr("== effective parity index N_par (k=2) and direct floor-rule check, 2<=n<=59 ==")
     for c in [(1,1),(2,1),(3,1),(3,-1),(6,-1),(4,-2),(5,-3)]:
         try:
             P=constants(c); kap,z,n=kappa2_and_Theta(c,P)
-            pr(c,"alpha_2=",mp.nstr(z,8),"kappa_2=",mp.nstr(kap,8),"N_par=",n)
+            bad=floor_rule_check(c)
+            pr(c,"alpha_2=",mp.nstr(z,8),"kappa_2=",mp.nstr(kap,8),"N_par=",n,"floor-rule violations:",bad)
         except AssertionError: pr(c,"not Pisot")
     open("tables_generated.txt","w").write("\n".join(out))
