@@ -1,0 +1,12 @@
+{
+  "title": "Code for \"Reciprocal sums of Pisot linear recurrences: effective rounding and the asymptotics of the error\"",
+  "upload_type": "software",
+  "version": "1.6",
+  "description": "Python scripts accompanying the paper \"Reciprocal sums of Pisot linear recurrences: effective rounding and the asymptotics of the error\" by A. Suna and P. K. Ray. The scripts reproduce the constants, starting indices and root-free bounds in Tables 1-3 (verify_pisot.py), the error-expansion comparisons of Tables 4-5 and the numerical observations of Section 6 (check_error_asymptotics.py), and the remaining numerical claims of Section 6 (verify_claims.py). All computations use mpmath multiprecision floating-point arithmetic with explicit precision margins; no interval arithmetic is used, so the results are computer-assisted, not formally certified. Requires Python 3.9+ and mpmath 1.3 (see requirements.txt).",
+  "creators": [
+    {"name": "Suna, Artatrana", "affiliation": "Government Women's College, Sambalpur, Odisha, India"},
+    {"name": "Ray, Prasanta Kumar", "affiliation": "Sambalpur University, Odisha, India"}
+  ],
+  "license": "mit",
+  "keywords": ["linear recurrence", "reciprocal sums", "Pisot polynomial", "nearest integer", "computer-assisted"]
+}

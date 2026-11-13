@@ -9,14 +9,13 @@ authors:
   - family-names: Ray
     given-names: Prasanta Kumar
     affiliation: "Sambalpur University, Odisha, India"
-version: "1.5"
+version: "1.6"
 date-released: "2026-11-13"
 license: MIT
 repository-code: "https://github.com/Arta1729/pisot-reciprocal-sums"
-# doi: add the version DOI here after Zenodo has minted it
 keywords:
   - linear recurrence
   - reciprocal sums
   - Pisot polynomial
-  - Binet formula
-  - rounding error
+  - nearest integer
+  - computer-assisted
